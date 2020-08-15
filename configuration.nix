@@ -15,6 +15,22 @@
   boot.loader.efi.canTouchEfiVariables = true;
   boot.loader.grub.useOSProber = true;
 
+  # Mount disks
+  fileSystems."/mnt/dc" = {
+    device = "/dev/lvmdc/lvol0";
+    fsType = "ext4";
+  };
+
+  fileSystems."/mnt/backup" = {
+    device = "/dev/disk/by-uuid/622f34fe-aee0-4f38-814e-fbd7e131b87f";
+    fsType = "ext4";
+  };
+
+  fileSystems."/mnt/arch" = {
+    device = "/dev/nvme0n1p2";
+    fsType = "ext4";
+  };
+
   networking.hostName = "alamere"; # Define your hostname.
 
   # The global useDHCP flag is deprecated, therefore explicitly set to false here.
@@ -55,6 +71,8 @@
     wget 
     stow
     git
+    gparted
+    borgbackup
     (import (builtins.fetchGit "https://github.com/eldridgejm/nixhome"))
   ];
 
@@ -68,6 +86,32 @@
 
   # lorri, for automatic rebuilding of nix shells
   services.lorri.enable = true;
+
+  # Backups with Borg
+  services.borgbackup.jobs.dc = {
+    paths = "/mnt/dc";
+    repo = "/mnt/backup/borg";
+    exclude = [
+      "*.cache/*"
+      "*/cache/*"
+      "*/lost+found/*"
+      "/mnt/dc/media"
+    ];
+    startAt = "*-*-* 03:00:00";
+    encryption.mode = "none";
+  };
+
+  services.borgbackup.jobs.home = {
+    paths = "/home";
+    repo = "/mnt/backup/borg";
+    exclude = [
+      "*.cache/*"
+      "*/cache/*"
+      "*/lost+found/*"
+    ];
+    startAt = "*-*-* 4:00:00";
+    encryption.mode = "none";
+  };
 
   # Enable the OpenSSH daemon.
   services.openssh.enable = true;
