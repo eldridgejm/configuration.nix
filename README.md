@@ -10,7 +10,7 @@ Installation
 2. Create a file called `secrets.nix` which includes the following:
 ```
 {
-    wireless_psk = your_wireless_psk_goes_here
+    wireless_psk = "your_wireless_psk_goes_here";
 }
 ```
 3. Run `nixos-rebuild switch`.
