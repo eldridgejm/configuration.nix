@@ -73,7 +73,6 @@
     git
     gparted
     borgbackup
-    (import (builtins.fetchGit "https://github.com/eldridgejm/nixhome"))
   ];
 
   fonts.fonts = with pkgs; [
