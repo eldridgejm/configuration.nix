@@ -78,6 +78,43 @@
   fonts.fonts = with pkgs; [
   ];
 
+  systemd.services.dsc40b-2020-fa = {
+    enable = true;
+    script = "/home/github-runner/dsc40b-2020-fa/run-in-shell.sh";
+    serviceConfig = {
+      User = "github-runner";
+      WorkingDirectory = "/home/github-runner/dsc40b-2020-fa";
+      Type = "simple";
+      Environment = "PATH=/home/github-runner/.nix-profile/bin:/etc/profiles/per-user/github-runner/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin";
+    };
+    environment = {
+        NIX_PATH = "nixpkgs=/nix/var/nix/profiles/per-user/root/channels/nixos:nixos-config=/etc/nixos/configuration.nix:/nix/var/nix/profiles/per-user/root/channels";
+    };
+
+    wantedBy = [ "default.target" ];
+
+  };
+
+
+  systemd.services.dsc10-2020-fa = {
+    enable = true;
+    script = "/home/github-runner/dsc10-2020-fa/run-in-shell.sh";
+    serviceConfig = {
+      User = "github-runner";
+      WorkingDirectory = "/home/github-runner/dsc10-2020-fa";
+      Type = "simple";
+      Environment = "PATH=/home/github-runner/.nix-profile/bin:/etc/profiles/per-user/github-runner/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin";
+    };
+    environment = {
+        NIX_PATH = "nixpkgs=/nix/var/nix/profiles/per-user/root/channels/nixos:nixos-config=/etc/nixos/configuration.nix:/nix/var/nix/profiles/per-user/root/channels";
+    };
+
+    wantedBy = [ "default.target" ];
+
+  };
+
+
+
   # List services that you want to enable:
 
   # Docker, of course
@@ -98,6 +135,12 @@
     ];
     startAt = "*-*-* 03:00:00";
     encryption.mode = "none";
+    prune.keep = {
+      daily = 7;
+      weekly = 4;
+      within = "1d";
+      monthly = -1;
+    };
   };
 
   services.borgbackup.jobs.home = {
@@ -154,6 +197,14 @@
     ];
   };
 
+  users.users.github-runner = {
+    isNormalUser = true;
+    extraGroups = [ "wheel" "docker" ]; # Enable ‘sudo’ for the user.
+    shell = pkgs.fish;
+    packages = with pkgs; [
+    ];
+  };
+
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions
   # on your system were taken. It‘s perfectly fine and recommended to leave
@@ -161,5 +212,12 @@
   # Before changing this value read the documentation for this option
   # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
   system.stateVersion = "20.03"; # Did you read the comment?
+
+  nix = {
+    package = pkgs.nixFlakes;
+    extraOptions = ''
+      experimental-features = nix-command flakes
+    '';
+  };
 
 }
