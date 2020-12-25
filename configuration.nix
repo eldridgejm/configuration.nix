@@ -73,46 +73,11 @@
     git
     gparted
     borgbackup
+    rclone
   ];
 
   fonts.fonts = with pkgs; [
   ];
-
-  systemd.services.dsc40b-2020-fa = {
-    enable = true;
-    script = "/home/github-runner/dsc40b-2020-fa/run-in-shell.sh";
-    serviceConfig = {
-      User = "github-runner";
-      WorkingDirectory = "/home/github-runner/dsc40b-2020-fa";
-      Type = "simple";
-      Environment = "PATH=/home/github-runner/.nix-profile/bin:/etc/profiles/per-user/github-runner/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin";
-    };
-    environment = {
-        NIX_PATH = "nixpkgs=/nix/var/nix/profiles/per-user/root/channels/nixos:nixos-config=/etc/nixos/configuration.nix:/nix/var/nix/profiles/per-user/root/channels";
-    };
-
-    wantedBy = [ "default.target" ];
-
-  };
-
-
-  systemd.services.dsc10-2020-fa = {
-    enable = true;
-    script = "/home/github-runner/dsc10-2020-fa/run-in-shell.sh";
-    serviceConfig = {
-      User = "github-runner";
-      WorkingDirectory = "/home/github-runner/dsc10-2020-fa";
-      Type = "simple";
-      Environment = "PATH=/home/github-runner/.nix-profile/bin:/etc/profiles/per-user/github-runner/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin";
-    };
-    environment = {
-        NIX_PATH = "nixpkgs=/nix/var/nix/profiles/per-user/root/channels/nixos:nixos-config=/etc/nixos/configuration.nix:/nix/var/nix/profiles/per-user/root/channels";
-    };
-
-    wantedBy = [ "default.target" ];
-
-  };
-
 
 
   # List services that you want to enable:
