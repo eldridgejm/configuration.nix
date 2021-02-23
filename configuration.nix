@@ -74,6 +74,8 @@
     gparted
     borgbackup
     rclone
+    unzip
+    zip
   ];
 
   fonts.fonts = with pkgs; [
@@ -84,6 +86,38 @@
 
   # Docker, of course
   virtualisation.docker.enable = true;
+
+  systemd.services.dsc40b = {
+      enable = true;
+      script = "/home/github-runner/40b-runner/run.sh";
+      serviceConfig = {
+        User = "github-runner";
+        WorkingDirectory = "/home/github-runner/40b-runner";
+        Type = "simple";
+        Environment = "PATH=/home/github-runner/.nix-profile/bin:/etc/profiles/per-user/github-runner/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin";
+      };
+      environment = {
+          NIX_PATH = "nixpkgs=/nix/var/nix/profiles/per-user/root/channels/nixos:nixos-config=/etc/nixos/configuration.nix:/nix/var/nix/profiles/per-user/root/channels";
+      };
+
+      wantedBy = [ "default.target" ];
+    };
+
+  systemd.services.dsc190 = {
+      enable = true;
+      script = "/home/github-runner/190-runner/run.sh";
+      serviceConfig = {
+        User = "github-runner";
+        WorkingDirectory = "/home/github-runner/190-runner";
+        Type = "simple";
+        Environment = "PATH=/home/github-runner/.nix-profile/bin:/etc/profiles/per-user/github-runner/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin";
+      };
+      environment = {
+          NIX_PATH = "nixpkgs=/nix/var/nix/profiles/per-user/root/channels/nixos:nixos-config=/etc/nixos/configuration.nix:/nix/var/nix/profiles/per-user/root/channels";
+      };
+
+      wantedBy = [ "default.target" ];
+    };
 
   # lorri, for automatic rebuilding of nix shells
   services.lorri.enable = true;
@@ -118,6 +152,11 @@
     ];
     startAt = "*-*-* 4:00:00";
     encryption.mode = "none";
+  };
+
+  services.plex = {
+    enable = true;
+    openFirewall = true;
   };
 
   # Enable the OpenSSH daemon.
