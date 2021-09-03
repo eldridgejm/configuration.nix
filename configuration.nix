@@ -68,10 +68,12 @@
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
-    wget 
+    wget
     stow
     git
     gparted
+    libnotify
+    dunst
     borgbackup
     rclone
     unzip
@@ -79,6 +81,9 @@
   ];
 
   fonts.fonts = with pkgs; [
+    noto-fonts
+    noto-fonts-cjk
+    noto-fonts-emoji
   ];
 
 
@@ -86,38 +91,6 @@
 
   # Docker, of course
   virtualisation.docker.enable = true;
-
-  systemd.services.dsc40b = {
-      enable = true;
-      script = "/home/github-runner/40b-runner/run.sh";
-      serviceConfig = {
-        User = "github-runner";
-        WorkingDirectory = "/home/github-runner/40b-runner";
-        Type = "simple";
-        Environment = "PATH=/home/github-runner/.nix-profile/bin:/etc/profiles/per-user/github-runner/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin";
-      };
-      environment = {
-          NIX_PATH = "nixpkgs=/nix/var/nix/profiles/per-user/root/channels/nixos:nixos-config=/etc/nixos/configuration.nix:/nix/var/nix/profiles/per-user/root/channels";
-      };
-
-      wantedBy = [ "default.target" ];
-    };
-
-  systemd.services.dsc190 = {
-      enable = true;
-      script = "/home/github-runner/190-runner/run.sh";
-      serviceConfig = {
-        User = "github-runner";
-        WorkingDirectory = "/home/github-runner/190-runner";
-        Type = "simple";
-        Environment = "PATH=/home/github-runner/.nix-profile/bin:/etc/profiles/per-user/github-runner/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin";
-      };
-      environment = {
-          NIX_PATH = "nixpkgs=/nix/var/nix/profiles/per-user/root/channels/nixos:nixos-config=/etc/nixos/configuration.nix:/nix/var/nix/profiles/per-user/root/channels";
-      };
-
-      wantedBy = [ "default.target" ];
-    };
 
   # lorri, for automatic rebuilding of nix shells
   services.lorri.enable = true;
@@ -130,10 +103,65 @@
       "*.cache/*"
       "*/cache/*"
       "*/lost+found/*"
-      "/mnt/dc/media"
+      "/mnt/dc/media/tv"
+      "/mnt/dc/media/movies"
+      "/mnt/dc/media/music"
+      "/mnt/dc/media/books"
+      "/mnt/dc/media/wallpaper"
     ];
     startAt = "*-*-* 03:00:00";
     encryption.mode = "none";
+    user = "eldridge";
+    group = "users";
+    prune.keep = {
+      daily = 7;
+      weekly = 4;
+      within = "1d";
+      monthly = -1;
+    };
+    postPrune = "${pkgs.rclone}/bin/rclone --verbose sync /mnt/backup/borg/ b2:EldridgeBackup --b2-hard-delete";
+  };
+
+  services.borgbackup.jobs.home = {
+    paths = "/home/eldridge";
+    repo = "/mnt/backup/borg";
+    exclude = [
+      "*.cache/*"
+      "*/cache/*"
+      "*/lost+found/*"
+      "github-runner/*"
+      "/home/eldridge/mnt"
+      "/home/eldridge/downloads"
+      "/home/eldridge/sandbox"
+    ];
+    startAt = "*-*-* 4:00:00";
+    encryption.mode = "none";
+    user = "eldridge";
+    group = "users";
+    prune.keep = {
+      daily = 7;
+      weekly = 4;
+      within = "1d";
+      monthly = -1;
+    };
+    postPrune = "${pkgs.rclone}/bin/rclone --verbose sync /mnt/backup/borg/ b2:EldridgeBackup --b2-hard-delete";
+  };
+
+  services.borgbackup.jobs.home-to-mendocino = {
+    paths = [ "/home/eldridge/workbench" "/home/eldridge/.nixhome" ];
+    repo = "ssh://mendocino/backup/alamere";
+    exclude = [
+      "*.cache/*"
+      "*/cache/*"
+      "*/lost+found/*"
+    ];
+    startAt = "*-*-* 4:00:00";
+    user = "eldridge";
+    group = "users";
+    encryption = {
+      mode = "repokey";
+      passphrase = (import ./secrets.nix).backup_passphrase;
+    };
     prune.keep = {
       daily = 7;
       weekly = 4;
@@ -142,21 +170,40 @@
     };
   };
 
-  services.borgbackup.jobs.home = {
-    paths = "/home";
-    repo = "/mnt/backup/borg";
+  services.borgbackup.jobs.dc-to-mendocino = {
+    paths = [ "/mnt/dc/photos" "/mnt/dc/archive" ];
+    repo = "ssh://mendocino/backup/dc";
     exclude = [
       "*.cache/*"
       "*/cache/*"
+      "*/autc/*"
       "*/lost+found/*"
     ];
-    startAt = "*-*-* 4:00:00";
-    encryption.mode = "none";
+    startAt = "*-*-* 5:00:00";
+    user = "eldridge";
+    group = "users";
+    encryption = {
+      mode = "repokey";
+      passphrase = (import ./secrets.nix).backup_passphrase;
+    };
+    prune.keep = {
+      daily = 7;
+      weekly = 4;
+      within = "1d";
+      monthly = -1;
+    };
   };
 
   services.plex = {
     enable = true;
     openFirewall = true;
+  };
+
+  services.syncthing = {
+    enable = true;
+    user = "eldridge";
+    dataDir = "/home/eldridge/syncthing";
+    configDir = "/home/eldridge/.config/syncthing";
   };
 
   # Enable the OpenSSH daemon.
@@ -192,6 +239,9 @@
   # Enable the Fish shell.
   programs.fish.enable = true;
 
+  # added to help configure thunar
+  programs.dconf.enable = true;
+
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.eldridge = {
     isNormalUser = true;
@@ -220,7 +270,7 @@
   nix = {
     package = pkgs.nixFlakes;
     extraOptions = ''
-      experimental-features = nix-command flakes
+      experimental-features = nix-command flakes ca-references
     '';
   };
 
