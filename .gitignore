@@ -1,2 +1,3 @@
 secrets.nix
 hardware-configuration.nix
+restic-password

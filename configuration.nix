@@ -74,7 +74,7 @@
     gparted
     libnotify
     dunst
-    borgbackup
+    restic
     rclone
     unzip
     zip
@@ -95,102 +95,178 @@
   # lorri, for automatic rebuilding of nix shells
   services.lorri.enable = true;
 
-  # Backups with Borg
-  services.borgbackup.jobs.dc = {
-    paths = "/mnt/dc";
-    repo = "/mnt/backup/borg";
-    exclude = [
-      "*.cache/*"
-      "*/cache/*"
-      "*/lost+found/*"
-      "/mnt/dc/media/tv"
-      "/mnt/dc/media/movies"
-      "/mnt/dc/media/music"
-      "/mnt/dc/media/books"
-      "/mnt/dc/media/wallpaper"
-    ];
-    startAt = "*-*-* 03:00:00";
-    encryption.mode = "none";
-    user = "eldridge";
-    group = "users";
-    prune.keep = {
-      daily = 7;
-      weekly = 4;
-      within = "1d";
-      monthly = -1;
+  services.restic.backups = {
+
+    home-local = {
+      passwordFile = "/etc/nixos/restic-password";
+      paths = [
+        "/home/eldridge/"
+      ];
+      repository = "/backup/local/alamere-home";
+      extraBackupArgs = [
+        "--verbose"
+        "--exclude='*.cache/*'"
+        "--exclude='*/cache/*'"
+        "--exclude='*/lost+found/*'"
+        "--exclude='github-runner/*'"
+        "--exclude='/home/eldridge/mnt'"
+        "--exclude='/home/eldridge/downloads'"
+        "--exclude='/home/eldridge/sandbox'"
+        "--exclude='*VirtualBox*'"
+      ];
+      pruneOpts = [
+        "--keep-daily 7"
+        "--keep-weekly 5"
+        "--keep-monthly 24"
+        "--keep-yearly 75"
+      ];
+
+      timerConfig = {
+        OnCalendar = "*-*-* 03:00:00";
+      };
     };
-    postPrune = "${pkgs.rclone}/bin/rclone --verbose sync /mnt/backup/borg/ b2:EldridgeBackup --b2-hard-delete";
+
+    home-remote = {
+      passwordFile = "/etc/nixos/restic-password";
+      paths = [
+        "/home/eldridge"
+      ];
+      repository = "b2:Eldridge-Backup:alamere-home";
+      extraBackupArgs = [
+        "--verbose"
+        "--exclude='*.cache/*'"
+        "--exclude='*/cache/*'"
+        "--exclude='*/lost+found/*'"
+        "--exclude='github-runner/*'"
+        "--exclude='/home/eldridge/mnt'"
+        "--exclude='/home/eldridge/downloads'"
+        "--exclude='/home/eldridge/sandbox'"
+        "--exclude='*VirtualBox*'"
+      ];
+      pruneOpts = [
+        "--keep-daily 7"
+        "--keep-weekly 5"
+        "--keep-monthly 24"
+        "--keep-yearly 75"
+      ];
+
+      timerConfig = {
+        OnCalendar = "*-*-* 04:00:00";
+      };
+    };
+
+    etc-local = {
+      passwordFile = "/etc/nixos/restic-password";
+      paths = [
+        "/etc"
+      ];
+      repository = "/backup/local/alamere-etc";
+      extraBackupArgs = [
+        "--verbose"
+      ];
+      pruneOpts = [
+        "--keep-daily 7"
+        "--keep-weekly 5"
+        "--keep-monthly 24"
+        "--keep-yearly 75"
+      ];
+
+      timerConfig = {
+        OnCalendar = "*-*-* 02:00:00";
+      };
+    };
+
+    etc-remote = {
+      passwordFile = "/etc/nixos/restic-password";
+      initialize = true;
+      paths = [
+        "/etc"
+      ];
+      repository = "b2:Eldridge-Backup:alamere-etc";
+      extraBackupArgs = [
+        "--verbose"
+      ];
+      pruneOpts = [
+        "--keep-daily 7"
+        "--keep-weekly 5"
+        "--keep-monthly 24"
+        "--keep-yearly 75"
+      ];
+
+      timerConfig = {
+        OnCalendar = "*-*-* 02:00:00";
+      };
+    };
+
+    dc-local = {
+      passwordFile = "/etc/nixos/restic-password";
+      paths = [
+        "/mnt/dc/photos" "/mnt/dc/archive"
+      ];
+      repository = "/backup/local/dc";
+      extraBackupArgs = [
+        "--verbose"
+        "--exclude='*.cache/*'"
+        "--exclude='*/cache/*'"
+        "--exclude='*/lost+found/*'"
+      ];
+      pruneOpts = [
+        "--keep-daily 7"
+        "--keep-weekly 5"
+        "--keep-monthly 24"
+        "--keep-yearly 75"
+      ];
+
+      timerConfig = {
+        OnCalendar = "*-*-* 03:30:00";
+      };
+    };
+
+    dc-remote = {
+      passwordFile = "/etc/nixos/restic-password";
+      paths = [
+        "/mnt/dc/photos" "/mnt/dc/archive"
+      ];
+      repository = "b2:Eldridge-Backup/dc";
+      extraBackupArgs = [
+        "--verbose"
+        "--exclude='*.cache/*'"
+        "--exclude='*/cache/*'"
+        "--exclude='*/lost+found/*'"
+        "--exclude='*/autc/*'"
+      ];
+      pruneOpts = [
+        "--keep-daily 7"
+        "--keep-weekly 5"
+        "--keep-monthly 24"
+        "--keep-yearly 75"
+      ];
+
+      timerConfig = {
+        OnCalendar = "*-*-* 04:30:00";
+      };
+    };
+
   };
 
-  services.borgbackup.jobs.home = {
-    paths = "/home/eldridge";
-    repo = "/mnt/backup/borg";
-    exclude = [
-      "*.cache/*"
-      "*/cache/*"
-      "*/lost+found/*"
-      "github-runner/*"
-      "/home/eldridge/mnt"
-      "/home/eldridge/downloads"
-      "/home/eldridge/sandbox"
-    ];
-    startAt = "*-*-* 4:00:00";
-    encryption.mode = "none";
-    user = "eldridge";
-    group = "users";
-    prune.keep = {
-      daily = 7;
-      weekly = 4;
-      within = "1d";
-      monthly = -1;
-    };
-    postPrune = "${pkgs.rclone}/bin/rclone --verbose sync /mnt/backup/borg/ b2:EldridgeBackup --b2-hard-delete";
-  };
-
-  services.borgbackup.jobs.home-to-mendocino = {
-    paths = [ "/home/eldridge/workbench" "/home/eldridge/.nixhome" ];
-    repo = "ssh://mendocino/backup/alamere";
-    exclude = [
-      "*.cache/*"
-      "*/cache/*"
-      "*/lost+found/*"
-    ];
-    startAt = "*-*-* 4:00:00";
-    user = "eldridge";
-    group = "users";
-    encryption = {
-      mode = "repokey";
-      passphrase = (import ./secrets.nix).backup_passphrase;
-    };
-    prune.keep = {
-      daily = 7;
-      weekly = 4;
-      within = "1d";
-      monthly = -1;
+  systemd.services.restic-backups-home-remote = {
+    environment = {
+      B2_ACCOUNT_ID = (import ./secrets.nix).b2_account_id;
+      B2_ACCOUNT_KEY = (import ./secrets.nix).b2_account_key;
     };
   };
 
-  services.borgbackup.jobs.dc-to-mendocino = {
-    paths = [ "/mnt/dc/photos" "/mnt/dc/archive" ];
-    repo = "ssh://mendocino/backup/dc";
-    exclude = [
-      "*.cache/*"
-      "*/cache/*"
-      "*/autc/*"
-      "*/lost+found/*"
-    ];
-    startAt = "*-*-* 5:00:00";
-    user = "eldridge";
-    group = "users";
-    encryption = {
-      mode = "repokey";
-      passphrase = (import ./secrets.nix).backup_passphrase;
+  systemd.services.restic-backups-etc-remote = {
+    environment = {
+      B2_ACCOUNT_ID = (import ./secrets.nix).b2_account_id;
+      B2_ACCOUNT_KEY = (import ./secrets.nix).b2_account_key;
     };
-    prune.keep = {
-      daily = 7;
-      weekly = 4;
-      within = "1d";
-      monthly = -1;
+  };
+
+  systemd.services.restic-backups-dc-remote = {
+    environment = {
+      B2_ACCOUNT_ID = (import ./secrets.nix).b2_account_id;
+      B2_ACCOUNT_KEY = (import ./secrets.nix).b2_account_key;
     };
   };
 
