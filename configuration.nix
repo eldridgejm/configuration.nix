@@ -21,7 +21,7 @@
     fsType = "ext4";
   };
 
-  fileSystems."/mnt/backup" = {
+  fileSystems."/backup" = {
     device = "/dev/disk/by-uuid/622f34fe-aee0-4f38-814e-fbd7e131b87f";
     fsType = "ext4";
   };
@@ -102,7 +102,7 @@
       paths = [
         "/home/eldridge/"
       ];
-      repository = "/backup/local/alamere-home";
+      repository = "/backup/alamere-home";
       extraBackupArgs = [
         "--verbose"
         "--exclude='*.cache/*'"
@@ -160,7 +160,7 @@
       paths = [
         "/etc"
       ];
-      repository = "/backup/local/alamere-etc";
+      repository = "/backup/alamere-etc";
       extraBackupArgs = [
         "--verbose"
       ];
@@ -201,9 +201,9 @@
     dc-local = {
       passwordFile = "/etc/nixos/restic-password";
       paths = [
-        "/mnt/dc/photos" "/mnt/dc/archive"
+        "/mnt/dc/photos" "/mnt/dc/archive" "/mnt/dc/.backup-tester"
       ];
-      repository = "/backup/local/dc";
+      repository = "/backup/dc";
       extraBackupArgs = [
         "--verbose"
         "--exclude='*.cache/*'"
@@ -224,10 +224,11 @@
 
     dc-remote = {
       passwordFile = "/etc/nixos/restic-password";
+      initialize = true;
       paths = [
-        "/mnt/dc/photos" "/mnt/dc/archive"
+        "/mnt/dc/photos" "/mnt/dc/archive" "/mnt/dc/.backup-tester"
       ];
-      repository = "b2:Eldridge-Backup/dc";
+      repository = "b2:Eldridge-Backup:dc";
       extraBackupArgs = [
         "--verbose"
         "--exclude='*.cache/*'"
@@ -247,6 +248,45 @@
       };
     };
 
+  };
+
+  systemd.services.backup-tester-home = rec {
+    description = "Create a file with the current time for use when checking backups.";
+    startAt = "hourly";
+    environment = {
+      inherit (config.environment.variables);
+    };
+
+    serviceConfig = {
+      User = "eldridge";
+      ExecStart = "${pkgs.bash}/bin/bash -c 'date > /home/eldridge/.backup-tester'";
+    };
+  };
+
+  systemd.services.backup-tester-etc = rec {
+    description = "Create a file with the current time for use when checking backups.";
+    startAt = "hourly";
+    environment = {
+      inherit (config.environment.variables);
+    };
+
+    serviceConfig = {
+      User = "root";
+      ExecStart = "${pkgs.bash}/bin/bash -c 'date > /etc/.backup-tester'";
+    };
+  };
+
+  systemd.services.backup-tester-dc = rec {
+    description = "Create a file with the current time for use when checking backups.";
+    startAt = "hourly";
+    environment = {
+      inherit (config.environment.variables);
+    };
+
+    serviceConfig = {
+      User = "eldridge";
+      ExecStart = "${pkgs.bash}/bin/bash -c 'date > /mnt/dc/.backup-tester'";
+    };
   };
 
   systemd.services.restic-backups-home-remote = {
